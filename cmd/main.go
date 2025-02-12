@@ -4,6 +4,7 @@ import (
 	"Backend-trainee-assignment-winter-2025/internal/config/serverConfig"
 	"Backend-trainee-assignment-winter-2025/internal/config/storageConfig"
 	"Backend-trainee-assignment-winter-2025/internal/handler"
+	accessToken "Backend-trainee-assignment-winter-2025/internal/jwt"
 	"Backend-trainee-assignment-winter-2025/internal/repository"
 	"Backend-trainee-assignment-winter-2025/internal/service"
 	"Backend-trainee-assignment-winter-2025/internal/storage"
@@ -30,6 +31,7 @@ func main() {
 
 	serverCfg := serverConfig.MustLoadServerConfig()
 	storageCfg := storageConfig.MustLoadStorageConfig()
+	accessToken.SetSecretKey(serverCfg.SecretKey)
 
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil)) //TODO: check this out
 

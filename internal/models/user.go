@@ -18,9 +18,9 @@ type CoinHistory struct {
 }
 
 type User struct {
-	Id        int    `json:"id"`
-	Username  string `json:"username"`
-	Password  string `json:"password"`
-	Coins     int64  `json:"coins"`
+	Id        int    `json:"id" db:"id"`
+	Username  string `json:"username" db:"username"`
+	Password  string `json:"password" db:"password"`
+	Coins     int64  `json:"coins" db:"coins"`
 	Inventory Inventory
 }

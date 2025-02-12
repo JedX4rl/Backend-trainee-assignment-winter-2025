@@ -37,6 +37,12 @@ func (a *AuthorizationService) SignIn(user *models.User, secret string, expiry i
 	return t, err
 }
 
+func (a *AuthorizationService) GetUserByUsername(c context.Context, username string) (*models.User, error) {
+	ctx, cancel := context.WithTimeout(c, time.Second*10)
+	defer cancel()
+	return a.Repo.GetUserByUsername(ctx, username)
+}
+
 func (a *AuthorizationService) CheckIfUserExists(c context.Context, username string) error {
 	ctx, cancel := context.WithTimeout(c, time.Second*10)
 	defer cancel()

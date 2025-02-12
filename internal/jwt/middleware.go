@@ -1,12 +1,11 @@
 package accessToken
 
 import (
-	"Backend-trainee-assignment-winter-2025/internal/config/serverConfig"
 	"fmt"
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/net/context"
+	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 ) //TODO improve
@@ -17,14 +16,19 @@ type Jwt struct {
 	jwt.StandardClaims
 }
 
+var JwtSecretKey []byte
+
+func SetSecretKey(secretKey string) {
+	if secretKey == "" {
+		log.Fatalf("Missing secret key")
+		return
+	}
+	JwtSecretKey = []byte(secretKey)
+}
+
 func JwtAuthMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			secret := os.Getenv(serverConfig.ACCESS_TOKEN_SECRET)
-			if secret == "" {
-				http.Error(w, "Missing secret key", http.StatusInternalServerError)
-				return
-			}
 
 			authToken, err := extractToken(r)
 			if err != nil {
@@ -32,7 +36,7 @@ func JwtAuthMiddleware() func(http.Handler) http.Handler {
 				return
 			}
 
-			userId, err := extractIDFromToken(authToken, secret)
+			userId, err := extractIDFromToken(authToken, string(JwtSecretKey))
 			if err != nil {
 				http.Error(w, "Invalid token", http.StatusUnauthorized)
 				return

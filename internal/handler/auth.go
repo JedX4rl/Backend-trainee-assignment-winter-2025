@@ -2,6 +2,7 @@ package handler
 
 import (
 	"Backend-trainee-assignment-winter-2025/internal/config/serverConfig"
+	accessTkn "Backend-trainee-assignment-winter-2025/internal/jwt"
 	"Backend-trainee-assignment-winter-2025/internal/models"
 	"encoding/json"
 	"golang.org/x/crypto/bcrypt"
@@ -13,51 +14,49 @@ import (
 
 func (h *Handler) Auth(w http.ResponseWriter, r *http.Request) {
 	var input models.User
+
 	err := json.NewDecoder(r.Body).Decode(&input) //TODO add validations and errors
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	encryptedPassword, err := bcrypt.GenerateFromPassword(
-		[]byte(input.Password),
-		bcrypt.DefaultCost,
-	)
+	//TODO add user validations
+
+	user, err := h.services.Authorization.GetUserByUsername(r.Context(), input.Username)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		//http.Error(w, Errors.JsonError(err.Error()), http.StatusInternalServerError)
 		return
 	}
-
-	user := models.User{
-		Username: input.Username,
-		Password: string(encryptedPassword),
-	}
-
-	if err = h.services.Authorization.CheckIfUserExists(r.Context(), user.Username); err != nil { //TODO check if user does not exist
-		err = h.services.Authorization.SignUp(r.Context(), &user)
+	if user != nil {
+		if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)) != nil {
+			http.Error(w, "Invalid password", http.StatusUnauthorized)
+			return
+		}
+	} else {
+		encryptedPassword, err := bcrypt.GenerateFromPassword(
+			[]byte(input.Password),
+			bcrypt.DefaultCost,
+		)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		input.Password = string(encryptedPassword)
+		if err = h.services.Authorization.SignUp(r.Context(), &input); err != nil {
+			http.Error(w, "Failed to create user", http.StatusInternalServerError)
+			return
+		}
 	}
 
-	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password)) != nil {
-		http.Error(w, "Wrong password", http.StatusBadRequest) //TODO change
+	expiry, err := strconv.Atoi(os.Getenv(serverConfig.ACCESS_TOKEN_EXPIRY_HOUR))
+	if err != nil || expiry <= 0 {
+		log.Println("Warning: ACCESS_TOKEN_EXPIRY_HOUR is not set or invalid")
+		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
 
-	token := os.Getenv(serverConfig.ACCESS_TOKEN_SECRET)
-	if token == "" {
-		log.Fatalf(serverConfig.ACCESS_TOKEN_SECRET + " environment variable not set") //TODO change
-	}
-
-	expiry, _ := strconv.ParseInt(os.Getenv(serverConfig.ACCESS_TOKEN_EXPIRY_HOUR), 10, 64)
-	if expiry == 0 {
-		log.Fatalf(serverConfig.ACCESS_TOKEN_EXPIRY_HOUR + " environment variable not set")
-	}
-
-	accessToken, err := h.services.Authorization.SignIn(&user, token, int(expiry))
+	accessToken, err := h.services.Authorization.SignIn(&input, string(accessTkn.JwtSecretKey), expiry)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

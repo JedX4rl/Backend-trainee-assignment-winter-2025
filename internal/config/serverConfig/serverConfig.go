@@ -8,13 +8,13 @@ import (
 )
 
 const (
-	ACCESS_TOKEN_SECRET      = "ACCESS_TOKEN_SECRET"
 	ACCESS_TOKEN_EXPIRY_HOUR = "ACCESS_TOKEN_EXPIRY_HOUR"
 	CONFIG_SERVER_PATH       = "CONFIG_SERVER_PATH"
 )
 
 type ServerConfig struct {
 	Env        string `yaml:"env" env:"ENV" env-default:"local"` //TODO remove?
+	SecretKey  string `yaml:"secret_key"`
 	HttpServer `yaml:"http_server" env-required:"true"`
 }
 

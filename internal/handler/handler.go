@@ -1,6 +1,7 @@
 package handler
 
 import (
+	accessTkn "Backend-trainee-assignment-winter-2025/internal/jwt"
 	"Backend-trainee-assignment-winter-2025/internal/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -30,10 +31,14 @@ func (h *Handler) InitRoutes() *chi.Mux {
 
 	router.Route("/api", func(r chi.Router) {
 		r.Post("/auth", h.Auth)
-		//r.Get("/info")
+		r.Group(func(protected chi.Router) {
+			protected.Use(accessTkn.JwtAuthMiddleware())
+			protected.Get("/info", h.Info)
+		})
 		//r.Get("/buy") //TODO: /api/buy/{item}
 		//r.Post("/auth")
 		//r.Post("/sendCoin")
 	})
+
 	return router
 }

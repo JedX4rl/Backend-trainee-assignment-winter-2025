@@ -9,6 +9,7 @@ import (
 type Authorization interface {
 	SignUp(c context.Context, user *models.User) error
 	SignIn(user *models.User, secret string, expiry int) (string, error)
+	GetUserByUsername(c context.Context, username string) (*models.User, error)
 	CheckIfUserExists(c context.Context, username string) error
 }
 
