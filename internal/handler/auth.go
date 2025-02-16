@@ -35,6 +35,5 @@ func (h *Handler) Auth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	middleware.JSONResponse(w, http.StatusOK, accessToken)
-
 	slog.Debug("auth response sent")
 }

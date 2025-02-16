@@ -8,7 +8,7 @@ import (
 )
 
 type User interface {
-	Auth(c context.Context, username, password string) (string, error)
+	Auth(c context.Context, username, password string) (models.AuthResponse, error)
 	GetUserByUsername(c context.Context, username string) (*models.User, error)
 	GetInfo(c context.Context, userId int) (*models.InfoResponse, error)
 }

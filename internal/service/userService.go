@@ -19,7 +19,7 @@ type UserService struct {
 	logger *slog.Logger
 }
 
-func (u *UserService) Auth(c context.Context, username, password string) (string, error) {
+func (u *UserService) Auth(c context.Context, username, password string) (models.AuthResponse, error) {
 	u.logger.Debug("Auth func called")
 	ctx, cancel := context.WithTimeout(c, time.Second*20)
 	defer cancel()
@@ -33,31 +33,31 @@ func (u *UserService) Auth(c context.Context, username, password string) (string
 			)
 			if err != nil {
 				u.logger.Error("Failed to generate password", "error", err)
-				return "", customErrors.ErrCreateUser
+				return models.AuthResponse{}, customErrors.ErrCreateUser
 
 			}
 			if user, err = u.Repo.SignUp(ctx, username, string(encryptedPassword)); err != nil {
 				u.logger.Error("Failed to sign up", "error", err)
-				return "", customErrors.ErrCreateUser
+				return models.AuthResponse{}, customErrors.ErrCreateUser
 			}
 		} else {
 			u.logger.Error("Unexpected error", "error", err)
-			return "", customErrors.ErrCreateUser
+			return models.AuthResponse{}, customErrors.ErrCreateUser
 		}
 	}
 	_, _ = []byte(user.Password), []byte(password)
 
 	if valid := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); valid != nil {
 		u.logger.Error("Invalid password", "error", valid)
-		return "", customErrors.ErrInvalidPassword
+		return models.AuthResponse{}, customErrors.ErrInvalidPassword
 	}
 	token, err := accessToken.GenerateJWT(user, accessToken.TokenExpiry)
 	if err != nil {
 		u.logger.Error("Failed to generate JWT", "error", err)
-		return "", fmt.Errorf("failed to generate token")
+		return models.AuthResponse{}, fmt.Errorf("failed to generate token")
 	}
 	u.logger.Debug("Generated JWT finished successfully")
-	return token, nil
+	return models.AuthResponse{Token: token}, nil
 }
 
 func (u *UserService) GetUserByUsername(c context.Context, username string) (*models.User, error) {
