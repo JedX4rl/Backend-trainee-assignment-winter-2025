@@ -18,8 +18,6 @@ cd Backend-trainee-assignment-winter-2025
 ```
 2. Запустить сервисы:
 
-docker-compose up при первом необходимо запускать 2 раза.
-
 ```bash
 docker-compose build
 docker-compose up
