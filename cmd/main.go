@@ -30,7 +30,7 @@ func init() {
 
 func main() {
 
-	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(logger)
 
 	serverCfg, err := serverConfig.MustLoadServerConfig()
