@@ -6,23 +6,29 @@ import (
 	"golang.org/x/net/context"
 )
 
-type Authorization interface {
-	SignUp(c context.Context, user *models.User) error
-	CheckIfUserExists(c context.Context, username string) error
+type User interface {
+	SignUp(c context.Context, username, password string) (*models.User, error)
 	GetUserByUsername(c context.Context, username string) (*models.User, error)
+	GetInfo(c context.Context, userId int) (*models.InfoResponse, error)
 }
 
-type User interface {
-	GetByUsername(c context.Context, username string) (*models.User, error)
+type Transaction interface {
+	SendMoney(c context.Context, senderId int, receiver string, amount int32) error
+}
+type Shop interface {
+	BuyItem(c context.Context, userId int, item string) error
 }
 
 type Repository struct {
-	Authorization
 	User
+	Transaction
+	Shop
 }
 
 func NewRepository(db *sql.DB) *Repository {
 	return &Repository{
-		Authorization: NewAuthorizationRepository(db),
+		User:        NewUserRepository(db),
+		Transaction: NewTransactionRepository(db),
+		Shop:        NewShopRepository(db),
 	}
 }

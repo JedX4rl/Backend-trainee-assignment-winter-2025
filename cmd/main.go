@@ -23,37 +23,52 @@ import (
 func init() {
 	err := godotenv.Load(".env")
 	if err != nil {
-		log.Fatalf("Error loading .env file")
+		slog.Error("Error loading .env file")
+		os.Exit(1)
 	}
 }
 
 func main() {
 
-	serverCfg := serverConfig.MustLoadServerConfig()
-	storageCfg := storageConfig.MustLoadStorageConfig()
-	accessToken.SetSecretKey(serverCfg.SecretKey)
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	slog.SetDefault(logger)
 
-	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil)) //TODO: check this out
+	serverCfg, err := serverConfig.MustLoadServerConfig()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	storageCfg, err := storageConfig.MustLoadStorageConfig()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	err = accessToken.SetSecretKey(serverCfg.SecretKey)
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	err = accessToken.SetTokenExpiry(serverCfg.TokenExpiry)
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
 
 	dataBase, err := storage.NewStorage(storageCfg)
 	if err != nil {
-		logger.Error("failed to connect to database", slog.Attr{Key: "error", Value: slog.StringValue(err.Error())}) //TODO
+		slog.Error(err.Error())
 		os.Exit(1)
 	}
 
-	logger.Info("connected to database")
+	slog.Info("connected to database")
 
 	defer func() {
 		err = dataBase.Close()
 		if err != nil {
-			logger.Error("got error when closing the DB connection", slog.Attr{Key: "error", Value: slog.StringValue(err.Error())})
+			slog.Error("failed to close database connection", "error", err)
 			os.Exit(1)
 		}
 	}()
 
 	repos := repository.NewRepository(dataBase)
 
-	services := service.NewService(repos)
+	services := service.NewService(repos, logger)
 
 	handlers := handler.NewHandler(services)
 
@@ -61,30 +76,32 @@ func main() {
 		Addr:    serverCfg.Address,
 		Handler: handlers.InitRoutes(),
 	}
+	slog.Info(serverCfg.Address)
 
 	go func() {
 		slog.Info("starting server...")
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			slog.Error("listen and serve error", slog.Attr{Key: "error", Value: slog.StringValue(err.Error())})
+			slog.Error("failed to start server", "error", err)
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGHUP, syscall.SIGABRT)
 	<-quit
 	slog.Info("shutting down server...")
+	slog.Info("timeout of 5 seconds.")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
-		log.Fatal("Server Shutdown:", err)
+		slog.Error("server forced to shutdown", "error", err)
 	}
 
 	select {
 	case <-ctx.Done():
-		log.Println("timeout of 5 seconds.")
+		slog.Info("timeout of 5 seconds reached")
 	}
 
-	log.Println("Server exiting")
+	slog.Info("server gracefully stopped")
 }

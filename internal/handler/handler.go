@@ -22,22 +22,20 @@ func (h *Handler) InitRoutes() *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
 	router.Use(middleware.URLFormat)
+	router.Use(middleware.Logger)
 
 	router.Use(cors.Handler(cors.Options{
 		AllowedMethods: []string{"GET", "POST"},
 	}))
 
-	//TODO add private routes
-
 	router.Route("/api", func(r chi.Router) {
 		r.Post("/auth", h.Auth)
 		r.Group(func(protected chi.Router) {
 			protected.Use(accessTkn.JwtAuthMiddleware())
-			protected.Get("/info", h.Info)
+			protected.Get("/info", h.GetInfo)
+			protected.Get("/buy/{item}", h.BuyItem)
+			protected.Post("/sendCoin", h.SendCoin)
 		})
-		//r.Get("/buy") //TODO: /api/buy/{item}
-		//r.Post("/auth")
-		//r.Post("/sendCoin")
 	})
 
 	return router

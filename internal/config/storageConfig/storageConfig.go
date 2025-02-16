@@ -1,8 +1,8 @@
 package storageConfig
 
 import (
+	"fmt"
 	"github.com/ilyakaznacheev/cleanenv"
-	"log"
 	"os"
 )
 
@@ -19,20 +19,20 @@ type StorageConfig struct {
 	SSLMode  string `yaml:"ssl_mode" env-required:"true"`
 }
 
-func MustLoadStorageConfig() StorageConfig {
+func MustLoadStorageConfig() (*StorageConfig, error) {
 
 	configPath := os.Getenv(CONFIG_STORAGE_PATH)
 	if configPath == "" {
-		log.Fatal(CONFIG_STORAGE_PATH + " environment variable not set")
+		return nil, fmt.Errorf("%s environment variable not set", CONFIG_STORAGE_PATH)
 	}
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		log.Fatalf(CONFIG_STORAGE_PATH+" does not exist: %s", configPath)
+		return nil, fmt.Errorf("%s does not exist %s", CONFIG_STORAGE_PATH, configPath)
 	}
 	var config StorageConfig
 
 	if err := cleanenv.ReadConfig(configPath, &config); err != nil {
-		log.Fatalf("cannot read database config: %s", err)
+		return nil, fmt.Errorf("cannot load database config file: %s", err)
 	}
 
-	return config
+	return &config, nil
 }
