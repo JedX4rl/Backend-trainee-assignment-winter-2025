@@ -53,12 +53,14 @@ func (u UserRepository) GetUserByUsername(c context.Context, username string) (*
 
 func (u UserRepository) GetInfo(c context.Context, userId int) (*models.InfoResponse, error) {
 	query := `WITH u_transactions AS (
-    SELECT t.sender_id AS user_id, u_sender.username AS other_user, t.amount, FALSE AS is_sent
+    SELECT t.receiver_id AS user_id, u_sender.username AS other_user, t.amount, FALSE AS is_sent
     FROM transactions t
              JOIN users u_sender ON u_sender.id = t.sender_id
     WHERE t.receiver_id = $1
+
     UNION ALL
-    SELECT t.receiver_id AS user_id, u_receiver.username AS other_user, t.amount, TRUE AS is_sent
+
+    SELECT t.sender_id AS user_id, u_receiver.username AS other_user, t.amount, TRUE AS is_sent
     FROM transactions t
              JOIN users u_receiver ON u_receiver.id = t.receiver_id
     WHERE t.sender_id = $1
@@ -72,13 +74,16 @@ func (u UserRepository) GetInfo(c context.Context, userId int) (*models.InfoResp
      )
 SELECT
     u.coins,
-    t.amount, t.other_user, t.is_sent,
-    i.item, i.quantity
+    COALESCE(t.amount, NULL) AS amount,
+    COALESCE(t.other_user, NULL) AS other_user,
+    COALESCE(t.is_sent, NULL) AS is_sent,
+    COALESCE(i.item, NULL) AS item,
+    COALESCE(i.quantity, NULL) AS quantity
 FROM users u
          LEFT JOIN u_transactions t ON u.id = t.user_id
-         LEFT JOIN users sender ON sender.id = t.user_id
          LEFT JOIN u_inventory i ON u.id = i.user_id
-WHERE u.id = $1;`
+WHERE u.id = $1;
+;`
 	tx, err := u.db.BeginTx(c, nil)
 	if err != nil {
 		return nil, err
